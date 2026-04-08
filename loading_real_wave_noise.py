@@ -3,10 +3,11 @@ import torch
 import torchaudio
 import torchaudio.transforms as T
 import matplotlib.pyplot as plt
+import numpy as np
 
 #--------------------------------------------------------------
-# untion: print_stats()
-# Description : print the information of wave file.
+# 函数: print_stats()
+# 描述: 打印音频文件的统计信息
 #--------------------------------------------------------------
 def print_stats(waveform, sample_rate=None, src=None):
     if src:
@@ -26,8 +27,8 @@ def print_stats(waveform, sample_rate=None, src=None):
         print()
 
 #-------------------------------------------------------------- 
-# Function: plot_waveform()
-# Decription : plot the waveform of the wave file 
+# 函数: plot_waveform()
+# 描述: 绘制音频文件的波形图
 #--------------------------------------------------------------
 def plot_waveform(waveform, sample_rate, title="Waveform", xlim=None, ylim=None):
     waveform = waveform.numpy()
@@ -51,8 +52,8 @@ def plot_waveform(waveform, sample_rate, title="Waveform", xlim=None, ylim=None)
     plt.show(block=True)
 
 #--------------------------------------------------------------
-# Function: plot_specgram()
-# Decription : plot the powerspecgram of the wave file 
+# 函数: plot_specgram()
+# 描述: 绘制音频文件的功率谱图
 #-------------------------------------------------------------
 def plot_specgram(waveform, sample_rate, title="Spectrogram", xlim=None):
     waveform = waveform.numpy()
@@ -73,8 +74,8 @@ def plot_specgram(waveform, sample_rate, title="Spectrogram", xlim=None):
     plt.show(block=True)
 
 #--------------------------------------------------------------
-# Function: resample_wav()
-# Description: resample the waveform using resample_rate
+# 函数: resample_wav()
+# 描述: 使用重采样率对波形进行重采样
 #--------------------------------------------------------------
 def resample_wav(waveform, sample_rate, resample_rate):
     resampler = T.Resample(sample_rate, resample_rate, dtype=waveform.dtype)
@@ -82,18 +83,18 @@ def resample_wav(waveform, sample_rate, resample_rate):
     return resampled_waveform
 
 #--------------------------------------------------------------
-# Function: loading_real_wave_noise()
-# Description: loading the raw aircraf noise and resample it. 
+# 函数: loading_real_wave_noise()
+# 描述: 加载原始飞机噪声并进行重采样
 #--------------------------------------------------------------
 def loading_real_wave_noise(folde_name, sound_name):
     SAMPLE_WAV_SPEECH_PATH = os.path.join(folde_name, sound_name)
-    waveform, sample_rate = torchaudio.load(SAMPLE_WAV_SPEECH_PATH)
+    waveform, sample_rate = torchaudio.load(SAMPLE_WAV_SPEECH_PATH, backend="soundfile")
     resample_rate = 16000
     waveform = resample_wav(waveform, sample_rate, resample_rate)
     return waveform, resample_rate
 
 #----------------------------------------------------------------
-# loading the wave file 
+# 主函数: 加载并分析音频文件
 def main():
     folde_name = 'Real_noise'
     sound_name = 'Aircraft.wav'
