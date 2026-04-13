@@ -81,7 +81,8 @@ class SFANC_FxNLMS:
         # 初始滤波器系数：使用第一秒对应的固定滤波器
         current_index = filter_index[0]
         w = self.control_filters[:, current_index].copy()
-        
+        # w = np.array(self.control_filters[:, current_index].copy(), dtype=np.float64)
+
         # 逐样本处理
         for n in range(N):
             # 更新延迟线
@@ -99,8 +100,9 @@ class SFANC_FxNLMS:
             norm = np.dot(x_buffer, x_buffer) + self.eps
             
             # 更新滤波器系数
-            w += Stepsize * e * x_buffer / norm
-            
+            # w += Stepsize * e * x_buffer / norm
+            w = w + Stepsize * e * x_buffer / norm
+
             # 检查是否需要切换固定滤波器（每秒切换一次）
             # 注意：索引从0开始，所以第 k 秒对应的样本范围为 [k*fs, (k+1)*fs-1]
             # 当处理完第 (n+1) 个样本时，如果 (n+1) 是 fs 的整数倍，则下一秒开始

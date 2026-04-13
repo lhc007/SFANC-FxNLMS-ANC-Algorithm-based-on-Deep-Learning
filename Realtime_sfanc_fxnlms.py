@@ -4,6 +4,10 @@ import sounddevice as sd
 from scipy.io import loadmat
 from Network import m6_res                # 预训练 CNN 模型
 
+"""
+实时 SFANC-FxNLMS 算法运行函数
+"""
+
 # 配置文件
 try:
     from config import anc_config
@@ -42,7 +46,7 @@ class RealtimeMIMOANCFxNLMS:
 
         # 1. 先加载次级路径矩阵，确定滤波器长度
         self.secondary_path = self.load_secondary_path_matrix(
-            'Primary and Secondary Path/Secondary_path.mat'
+            'Primary and Secondary Path/secondary_path_5mic_4spk.npy'
         )
         self.filter_len = self.secondary_path.shape[2]
 
@@ -91,10 +95,84 @@ class RealtimeMIMOANCFxNLMS:
         返回形状: [num_error, num_spk, filter_len]
         """
         print(f"加载次级路径矩阵: {mat_file}")
-        data = loadmat(mat_file)
-        S = data['S'].astype(np.float32)
+        data = np.load(mat_file)
+        S = data.astype(np.float32)
         print(f"次级路径矩阵形状: {S.shape} (error, spk, filter_len)")
         return S
+
+    # def load_control_filters(self, mat_file):
+    #     print(f"加载控制滤波器: {mat_file}")
+    #     data = loadmat(mat_file)
+    #     Wc = data['Wc_v'].astype(np.float32)
+    #     print(f"原始控制滤波器形状: {Wc.shape}")
+    #     # 假设形状为 (num_filters, filter_len) 或 (filter_len, num_filters)
+    #     if Wc.ndim == 2:
+    #         # 判断哪一维可能是滤波器长度（应该等于 self.filter_len 或更大）
+    #         if Wc.shape[1] == self.filter_len:
+    #             # (num_filters, filter_len) -> (filter_len, 1, num_filters)
+    #             Wc = Wc.T.reshape(self.filter_len, 1, -1)
+    #         elif Wc.shape[0] == self.filter_len:
+    #             # (filter_len, num_filters) -> (filter_len, 1, num_filters)
+    #             Wc = Wc.reshape(self.filter_len, 1, -1)
+    #         else:
+    #             # 都不匹配，尝试将较长的维度作为 filter_len
+    #             if Wc.shape[0] > Wc.shape[1]:
+    #                 filter_len_candidate = Wc.shape[0]
+    #                 Wc = Wc.reshape(filter_len_candidate, 1, -1)
+    #             else:
+    #                 filter_len_candidate = Wc.shape[1]
+    #                 Wc = Wc.T.reshape(filter_len_candidate, 1, -1)
+    #             print(f"警告：滤波器长度 {filter_len_candidate} 与次级路径长度 {self.filter_len} 不一致")
+    #             # 这里可以选择截断或补零，见下文
+    #     elif Wc.ndim == 3:
+    #         # 已经是预期形状，但需验证维度顺序
+    #         pass
+    #     else:
+    #         raise ValueError(f"不支持的控制滤波器维度: {Wc.ndim}")
+    #     print(f"重塑后控制滤波器形状: {Wc.shape} (filter_len, num_spk, num_filters)")
+    #     return Wc
+
+    # def load_secondary_path_matrix(self, mat_file):
+    #     print(f"加载次级路径矩阵: {mat_file}")
+    #     data = np.load(mat_file)
+    #     # 尝试获取次级路径数据，常见变量名 'S', 'S_primary', 'secondary' 等
+    #     S = None
+    #     for key in ['S', 'secondary', 'sec_path', 'S_est']:
+    #         if key in data:
+    #             S = data[key]
+    #             break
+    #     if S is None:
+    #         # 如果都没有，取第一个非__的变量
+    #         for k, v in data.items():
+    #             if not k.startswith('__'):
+    #                 S = v
+    #                 break
+    #     S = S.astype(np.float32)
+    #     print(f"原始次级路径形状: {S.shape}")
+        
+    #     # 如果是一维或二维 (filter_len, 1) 则视为 SISO
+    #     if S.ndim == 1:
+    #         filter_len = S.shape[0]
+    #         S = S.reshape(1, 1, filter_len)
+    #     elif S.ndim == 2 and S.shape[1] == 1:
+    #         filter_len = S.shape[0]
+    #         S = S.reshape(1, 1, filter_len)
+    #     elif S.ndim == 3:
+    #         # 假设形状可能是 (num_error, num_spk, filter_len) 或 (filter_len, num_error, num_spk)
+    #         # 检查哪个维度长度匹配 num_error/num_spk
+    #         if S.shape[0] == self.num_error and S.shape[1] == self.num_spk:
+    #             pass  # 已经是正确顺序
+    #         elif S.shape[2] == self.num_error and S.shape[1] == self.num_spk:
+    #             S = np.transpose(S, (2, 1, 0))  # (filter_len, num_spk, num_error) -> (num_error, num_spk, filter_len)
+    #         elif S.shape[0] == self.num_spk and S.shape[1] == self.num_error:
+    #             S = np.transpose(S, (1, 0, 2))
+    #         else:
+    #             raise ValueError(f"无法自动推断次级路径维度，形状 {S.shape}，期望 (num_error={self.num_error}, num_spk={self.num_spk}, filter_len)")
+    #     else:
+    #         raise ValueError(f"次级路径维度异常: {S.ndim}D, 形状 {S.shape}")
+        
+    #     print(f"重塑后次级路径形状: {S.shape} (error, spk, filter_len)")
+    #     return S
 
     def setup_audio_devices(self):
         """查找并验证音频设备"""

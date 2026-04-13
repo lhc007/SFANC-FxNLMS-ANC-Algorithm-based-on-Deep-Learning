@@ -86,13 +86,34 @@ def resample_wav(waveform, sample_rate, resample_rate):
 # 函数: loading_real_wave_noise()
 # 描述: 加载原始飞机噪声并进行重采样
 #--------------------------------------------------------------
-def loading_real_wave_noise(folde_name, sound_name):
-    SAMPLE_WAV_SPEECH_PATH = os.path.join(folde_name, sound_name)
-    waveform, sample_rate = torchaudio.load(SAMPLE_WAV_SPEECH_PATH, backend="soundfile")
-    resample_rate = 16000
-    waveform = resample_wav(waveform, sample_rate, resample_rate)
-    return waveform, resample_rate
+# def loading_real_wave_noise(folde_name, sound_name):
+#     SAMPLE_WAV_SPEECH_PATH = os.path.join(folde_name, sound_name)
+#     waveform, sample_rate = torchaudio.load(SAMPLE_WAV_SPEECH_PATH, backend="soundfile")
 
+#     resample_rate = 16000
+#     waveform = resample_wav(waveform, sample_rate, resample_rate)
+#     return waveform, resample_rate
+
+import soundfile as sf
+import torchaudio.functional as F
+
+def loading_real_wave_noise(folde_name, sound_name):
+    file_path = os.path.join(folde_name, sound_name)
+    
+    # 使用 soundfile 读取音频
+    waveform_np, sample_rate = sf.read(file_path, dtype='float32')
+    
+    # 转为 torch 张量，形状 (channels, samples)
+    if waveform_np.ndim == 1:
+        waveform = torch.from_numpy(waveform_np).unsqueeze(0)  # (1, N)
+    else:
+        waveform = torch.from_numpy(waveform_np.T)  # soundfile 返回 (samples, channels) -> (channels, samples)
+    
+    resample_rate = 16000
+    if sample_rate != resample_rate:
+        waveform = F.resample(waveform, sample_rate, resample_rate)
+    
+    return waveform, resample_rate
 #----------------------------------------------------------------
 # 主函数: 加载并分析音频文件
 def main():
