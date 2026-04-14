@@ -34,7 +34,9 @@ class FxNLMS():
         return self.Wc.detach().numpy()
 
 # class FxNLMS:
-#     """NumPy 方式实现的 FxNLMS 自适应滤波器"""
+#   """
+#       NumPy 方式实现的 FANC-FxNLMS 混合主动噪声控制算法
+#   """
     
 #     def __init__(self, filter_len, initial_coeffs=None, eps=1e-6):
 #         self.filter_len = filter_len
@@ -98,7 +100,9 @@ class SFANC_FxNLMS:
         print(f"加载了 {self.num_filters} 个固定控制滤波器，每个长度 {self.filter_len}")
 
     # def noise_cancellation(self, Dis, Fx, filter_index, Stepsize):
-    #     NumPy 方式实现
+    #   """
+    #       NumPy 方式实现的 FANC-FxNLMS 混合主动噪声控制算法
+    #   """
 
     #     N = len(Dis)
     #     error_signal = np.zeros(N)
@@ -187,101 +191,3 @@ class SFANC_FxNLMS:
         Wc_vectors = mat_contents['Wc_v'][:15, :] # !!! 15 个子控制滤波器
         print(f"滤波器原始形状: {Wc_vectors.shape}")   # 输出 (num_filters, filter_len)
         return torch.from_numpy(Wc_vectors).type(torch.float)
-
-
-#------------------------------------------------------------------------------
-# 类: FxNLMS 算法，初始系数由 GFANC 确定
-#------------------------------------------------------------------------------
-class FxNLMS2():
-    def __init__(self, Len, Ws):
-        self.Wc = torch.tensor(Ws, requires_grad=True) # Ws: 初始系数
-        self.Xd = torch.zeros(1, Len, dtype=torch.float)
-    
-    def feedforward(self,Xf):
-        self.Xd = torch.roll(self.Xd,1,1)
-        self.Xd[0,0] = Xf 
-        yt = self.Wc @ self.Xd.t()
-        power = self.Xd @ self.Xd.t() # 与 FxLMS 不同
-        return yt, power
-    
-    def LossFunction(self, y, d, power):
-        e = d-y
-        return e**2 / (2*power + 1e-12), e
-    
-    def _get_coeff_(self):
-        return self.Wc.detach().numpy()
-
-class SFANC_FxNLMS2:
-    def __init__(self, MAT_FILE, fs=16000, filter_len=1024):
-        self.fs = fs
-        self.filter_len = filter_len
-        self.control_filters = self.Load_Pretrained_filters_to_tensor(MAT_FILE) # 子控制滤波器 torch.Size([15, 1024])
-        self.num_filters = self.control_filters.shape[0] #滤波器数量
-        self.filter_len = self.control_filters.shape[1] #滤波器长度
-
-    def noise_cancellation(self, Dis, Fx, filter_index, Stepsize):
-        """
-        参数:
-            Dis: 干扰信号，一维数组或张量
-            Fx:  滤波参考信号，一维数组或张量
-            filter_index: 每秒对应的滤波器索引，长度等于信号秒数（向上取整）
-            Stepsize: 学习率
-        返回:
-            Error: 误差信号列表
-        """
-        # 统一转换为 numpy 数组以便索引，但保留标量值用于 PyTorch
-        if torch.is_tensor(Dis):
-            Dis = Dis.numpy().flatten()
-        if torch.is_tensor(Fx):
-            Fx = Fx.numpy().flatten()
-        Dis = np.asarray(Dis, dtype=np.float32).flatten()
-        Fx  = np.asarray(Fx,  dtype=np.float32).flatten()
-
-        N = len(Dis)
-        assert len(Fx) == N, "Dis 和 Fx 长度必须相等"
-
-        Error = []
-        j = 0  # 已过去的秒数计数器
-
-        # 初始滤波器：使用 filter_index[0] 指定的固定滤波器
-        init_idx = filter_index[0]
-        current_filter = self.control_filters[init_idx]  # shape (filter_len,)
-        model = FxNLMS2(Len=self.filter_len, Ws=current_filter)
-        optimizer = optim.SGD([model.Wc], lr=Stepsize)
-
-        for ii in range(N):
-            # 当前样本
-            x_f = torch.tensor(Fx[ii], dtype=torch.float)
-            d   = torch.tensor(Dis[ii], dtype=torch.float)
-
-            y, power = model.feedforward(x_f)
-            loss, e = model.LossFunction(y, d, power)
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            Error.append(e.item())
-
-            # 每秒结束时检查是否切换滤波器
-            if (ii + 1) % self.fs == 0:
-                next_sec = (ii + 1) // self.fs
-                if next_sec < len(filter_index):
-                    new_idx = filter_index[next_sec]
-                    if new_idx != init_idx:
-                        print(f'第 {next_sec} 秒：切换控制滤波器，索引 {init_idx} -> {new_idx}')
-                        init_idx = new_idx
-                        new_filter = self.control_filters[new_idx]
-                        model = FxNLMS2(Len=self.filter_len, Ws=new_filter)
-                        optimizer = optim.SGD([model.Wc], lr=Stepsize)
-                j += 1
-
-        return Error
-
-    def Load_Pretrained_filters_to_tensor(self, MAT_FILE): # 从 mat 文件加载预训练控制滤波器
-        mat_contents = loadmat(MAT_FILE)
-        print(f"文件中包含的所有键 (Keys): {list(mat_contents.keys())}")        
-        Wc_vectors = mat_contents['Wc_v'][:15, :] # !!! 15 个子控制滤波器
-        print(f"滤波器原始形状: {Wc_vectors.shape}")   # 输出 (num_filters, filter_len)
-        return torch.from_numpy(Wc_vectors).type(torch.float)
-        
