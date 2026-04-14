@@ -10,26 +10,26 @@ import torch
 # 描述: 使用默认参数生成干扰信号和参考信号
 #-------------------------------------------------------------
 def Disturbance_reference_generation():
-    # Defined the configuration for the ANC system
-    fs = 16000 # The system sampling rate 
-    T = 5 # The duraiton of the simulation 
+    # 定义ANC系统的配置
+    fs = 16000 # 采样率
+    T = 5 # 模拟时间
     t = np.arange(0,T,1/fs).reshape(-1,1)
     f0 = 500
     
-    # Constructing the refererence signal
+    # 生成参考信号
     Re = np.random.randn(len(t))
     
-    # Define the low-pass filter
+    # 定义低通滤波器
     f_cutoff = 2000 
     N_fc = f_cutoff/fs 
     b1, b2 = signal.firwin(128, N_fc), signal.firwin(128, 2*N_fc)
     
-    # Constructing primary path
+    # 构建主路径
     Pri_path = signal.convolve(b1,b2)
     w1, h1 = signal.freqz(Pri_path)
     w2, h2 = signal.freqz(b2)
 
-    # Drawing the frequency response of the low-pass filter 
+    # 绘制低通滤波器的频谱响应图
     plt.title('Digital filter frequency response')
     plt.plot(w1, 20*np.log10(np.abs(h1)),'b')
     plt.plot(w2, 20*np.log10(np.abs(h2)),'r')
@@ -38,7 +38,7 @@ def Disturbance_reference_generation():
     plt.grid()
     plt.show()
 
-    # Drawing the impulse response of the primary path
+    # 绘制主路径的脉冲响应图
     plt.title('The response of the primary path')
     plt.plot(b1)
     plt.ylabel('Amplitude')
@@ -46,12 +46,12 @@ def Disturbance_reference_generation():
     plt.grid()
     plt.show()
     
-    # Construting the desired signal 
+    # 构建所需信号
     Dir, Fx = signal.lfilter(Pri_path, 1, Re), signal.lfilter(b2, 1, Re)
     print(Fx[1])
     print(Dir.shape, Fx.shape)
 
-    # Drawing the frequency spectrum of the disturbance 
+    # 绘制干扰信号的频谱图
     f, Pper_spec = signal.periodogram(Dir, fs, 'flattop', scaling='spectrum')
     plt.semilogy(f, Pper_spec)
     plt.xlabel('frequency [Hz]')
@@ -59,7 +59,7 @@ def Disturbance_reference_generation():
     plt.grid()
     plt.show()
 
-    # Drawing the frequency spectrum of the Fx
+    # 绘制参考信号的频谱图
     f, Pper_spec = signal.periodogram(Fx, fs, 'flattop', scaling='spectrum')
     plt.semilogy(f, Pper_spec)
     plt.xlabel('frequency [Hz]')
@@ -74,17 +74,18 @@ def Disturbance_reference_generation():
 # 描述: 根据定义的频率向量生成干扰信号和参考信号
 #-------------------------------------------------------------
 def Disturbance_reference_generation_from_Fvector(fs, T, f_vector, Pri_path, Sec_path):
-    # Pri_path and Sec_path are One dimension arraies
-    # constructing bandpass filter based on f_vector
+    # Pri_path 和 Sec_path 是一维数组
+    # 构建带通滤波器
+    # 生成随机噪声
     t = np.arange(0,T,1/fs).reshape(-1,1)
     len_f = 1024
     b2 = signal.firwin(len_f, [f_vector[0],f_vector[1]], pass_zero='bandpass', window ='hamming', fs=fs)
     
     xin = np.random.randn(len(t))
-    Re = signal.lfilter(b2,1,xin) # random signal pass the bandpass filter to get the noise
+    Re = signal.lfilter(b2,1,xin) # 随机噪声通过带通滤波器，得到干扰信号
     Noise = Re[len_f-1:]
     
-    # Construting the desired signal
+    # 构建所需信号
     Dir, Fx = signal.lfilter(Pri_path, 1, Noise), signal.lfilter(Sec_path, 1, Noise)
     
     return torch.from_numpy(Dir).type(torch.float), torch.from_numpy(Fx).type(torch.float)
@@ -97,10 +98,10 @@ def Disturbance_generation_from_real_noise(fs, Repet, wave_form, Pri_path, Sec_p
     wave = wave_form[0,:].numpy()
     wavec = wave
     for ii in range(Repet):
-        wavec = np.concatenate((wavec,wave),axis=0) # add the length of the wave_form through repetition
+        wavec = np.concatenate((wavec,wave),axis=0) # 通过重复增加波形的长度
     pass
 
-    # Construting the desired signal
+    # 构建所需信号
     Dir, Fx = signal.lfilter(Pri_path, 1, wavec), signal.lfilter(Sec_path, 1, wavec)
     
     N = len(Dir)
@@ -128,7 +129,7 @@ def Varied_distrubance_reference_generation_from_Fvector(fs, T, f_vector, Pri_pa
             else: 
                 Noise = np.concatenate((Noise, Re[fs:]),axis=0)
         
-    # Construting the desired signal 
+    # 构建所需信号
     Dir, Fx = signal.lfilter(Pri_path, 1, Noise), signal.lfilter(Sec_path, 1, Noise)
     
     return torch.from_numpy(Dir).type(torch.float), torch.from_numpy(Fx).type(torch.float), torch.from_numpy(Noise).type(torch.float)

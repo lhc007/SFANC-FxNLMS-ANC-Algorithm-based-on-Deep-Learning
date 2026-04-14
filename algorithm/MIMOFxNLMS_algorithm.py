@@ -6,18 +6,18 @@ import scipy.signal as signal
 import progressbar
 
 #------------------------------------------------------------------------------
-# 类: MOMIFxNLMS
+# 类: MIMOFxNLMS
 # 描述: 实现多输入多输出滤波-x归一化最小均方算法，用于多通道主动噪声控制。
-#       MOMI = Multiple-Output Multiple-Input
+#       MIMO = Multiple-Output Multiple-Input
 #       I: 参考输入通道数
 #       J: 次级声源（控制输出）通道数
 #       K: 误差传感器通道数
 #------------------------------------------------------------------------------
-class MOMIFxNLMS():
+class MIMOFxNLMS():
     
     def __init__(self, I, J, K, Len, SecPath):
         """
-        初始化MOMIFxNLMS算法
+        初始化MIMOFxNLMS算法
         
         参数:
         - I: 参考麦克风数量（输入通道数）
@@ -159,15 +159,15 @@ class MOMIFxNLMS():
         return self.Wc.detach().numpy()
 
 #------------------------------------------------------------------------------
-# 函数: train_momifxnlms_algorithm()
+# 函数: train_mimofxnlms_algorithm()
 # 描述: 在线训练多通道FxNLMS算法（手动更新版本，更贴合DSP实现）
 #------------------------------------------------------------------------------
-def train_momifxnlms_algorithm(Model, Ref, Disturbance, Stepsize=0.0001):
+def train_mimofxnlms_algorithm(Model, Ref, Disturbance, Stepsize=0.0001):
     """
-    训练MOMIFxNLMS算法
+    训练MIMOFxxNLMS算法
     
     参数:
-    - Model: MOMIFxNLMS模型实例
+    - Model: MIMOFxNLMS模型实例
     - Ref: 参考信号，形状 (样本数, I)
     - Disturbance: 干扰信号（误差麦克风处），形状 (样本数, K)
     - Stepsize: 步长参数 mu

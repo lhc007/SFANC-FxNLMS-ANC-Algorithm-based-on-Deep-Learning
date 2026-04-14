@@ -1,7 +1,7 @@
 import torch
 
 from Modified_ShufflenetV2 import Modified_ShufflenetV2
-from Loading_real_wave_noise_2D import waveform_to_spectorgram
+from data.Loading_real_wave_noise_2D import waveform_to_spectorgram
 
 
 def load_weigth_for_model(model, pretrained_path):
