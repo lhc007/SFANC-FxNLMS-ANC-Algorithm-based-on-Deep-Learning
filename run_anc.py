@@ -268,7 +268,7 @@ def save_results(results):
     print("\n=== 保存结果 ===")
     
     # 保存性能结果到文本文件
-    with open('performance_results.txt', 'w', encoding='utf-8') as f:
+    with open('atlas/performance_results.txt', 'w', encoding='utf-8') as f:
         f.write("SFANC-FxNLMS 算法性能结果\n")
         f.write("=" * 50 + "\n\n")
         f.write(f"原始信号RMSE: {results['rmse_original']:.4f}\n")
@@ -277,8 +277,8 @@ def save_results(results):
         f.write(f"FxNLMS SNR改善: {results['snr_fxnlms']:.2f} dB\n")
         f.write(f"混合算法SNR改善: {results['snr_hybrid']:.2f} dB\n")
     
-    print("性能结果已保存到 performance_results.txt")
-    print("图表已保存到 pdf/ 目录")
+    print("性能结果已保存到 atlas/performance_results.txt")
+    print("图表已保存到 atlas/ 目录")
 
 def main():
     """主函数"""
