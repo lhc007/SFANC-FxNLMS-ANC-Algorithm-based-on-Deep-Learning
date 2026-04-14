@@ -108,6 +108,8 @@ def Disturbance_generation_from_real_noise(fs, Repet, wave_form, Pri_path, Sec_p
     N_z = N//fs
     Dir, Fx = Dir[0:N_z*fs], Fx[0:N_z*fs]
     
+    # torch.from_numpy(Dir)：将 NumPy 数组 Dir 转换为 PyTorch 张量（Tensor），两者共享内存（零拷贝）。
+    # .type(torch.float)：将张量的数据类型设置为 torch.float，即 32 位浮点数（float32）。
     return torch.from_numpy(Dir).type(torch.float), torch.from_numpy(Fx).type(torch.float), torch.from_numpy(wavec).type(torch.float)
 
 #-------------------------------------------------------------

@@ -111,6 +111,10 @@ def run_fxnlms_algorithm(fs, StepSize, Dis, Fx):
     # 创建时间轴用于绘图
     Time = np.arange(len(Dis)) / fs
     
+    # 中文显示设置
+    plt.rcParams['font.sans-serif'] = ['SimHei']
+    plt.rcParams['axes.unicode_minus'] = False
+
     # 绘制FxNLMS算法结果
     print("绘制FxNLMS算法结果...")
     plt.figure(figsize=(10, 6))
@@ -159,15 +163,11 @@ def run_sfanc_fxnlms_hybrid(fs, StepSize, Dis, Fx, id_vector):
         fs=16000  # 采样率
     )
     
-    # 确保数据为numpy数组
-    Dis_np = Dis.numpy().flatten().astype(np.float64)
-    Fx_np = Fx.numpy().flatten().astype(np.float64)
-    
     # 执行噪声消除
     print("执行噪声消除...")
     Error_SFANC_FxNLMS = SFANC_FxNLMS_Cancellation.noise_cancellation(
-        Dis=Dis_np,  # 干扰信号
-        Fx=Fx_np,  # filtered-x信号
+        Dis=Dis,  # 干扰信号
+        Fx=Fx,  # filtered-x信号
         filter_index=id_vector,  # 选择的滤波器索引
         Stepsize=StepSize  # 学习率
     )
@@ -189,7 +189,7 @@ def run_sfanc_fxnlms_hybrid(fs, StepSize, Dis, Fx, id_vector):
     plt.legend()
     plt.grid(alpha=0.3)
     
-    plt.savefig('pdf/SFANC_FxNLMS.pdf', dpi=600, bbox_inches='tight', pad_inches=0)
+    plt.savefig('atlas/SFANC_FxNLMS.pdf', dpi=600, bbox_inches='tight', pad_inches=0)
     plt.close()
     
     return Error_SFANC_FxNLMS
