@@ -41,6 +41,15 @@ def loading_paths_from_MAT(folder, subfolder, Pri_path_file_name, Sec_path_file_
     - Secon_path: 次级路径数据
     """
     Primay_path_file, Secondary_path_file = os.path.join(folder, subfolder, Pri_path_file_name), os.path.join(folder,subfolder, Sec_path_file_name)
-    Pri_dfs, Secon_dfs = sio.loadmat(Primay_path_file), sio.loadmat(Secondary_path_file)
-    Pri_path, Secon_path = Pri_dfs['Pz1'].squeeze(), Secon_dfs['S'].squeeze()
+    Pri_dfs = sio.loadmat(Primay_path_file)
+    # 加载次级路径：根据文件扩展名选择方法
+    if Sec_path_file_name.endswith('.npy'):
+        Secon_path = np.load(Secondary_path_file)
+    else:
+        mat_dict_sec = sio.loadmat(Secondary_path_file)
+        # 假设次级路径变量名为 'S'，请根据实际文件修改
+        Secon_path = mat_dict_sec['S'].squeeze()
+    
+    # Secon_dfs = sio.loadmat(Secondary_path_file)
+    Pri_path = Pri_dfs['Pz1'].squeeze()
     return Pri_path, Secon_path

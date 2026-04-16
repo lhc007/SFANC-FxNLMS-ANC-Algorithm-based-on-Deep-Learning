@@ -28,7 +28,10 @@ try:
     from algorithm.FxNLMS_algorithm import FxNLMS, train_fxnlms_algorithm
     from algorithm.Control_filter_selection import Control_filter_selection
     from data.Disturbance_generation import Disturbance_generation_from_real_noise
+    from data.Disturbance_generation import Disturbance_generation_from_real_noise_MIMO
     from algorithm.Combine_SFANC_with_FxNLMS import SFANC_FxNLMS
+    from algorithm.Combine_MIMO_SFANC_with_FxNLMS import MIMO_SFANC_FxNLMS
+
 except ImportError as e:
     print(f"导入模块错误: {e}")
     print("请确保项目结构正确，模块文件存在")
@@ -62,22 +65,32 @@ def load_and_preprocess_data():
     
     # 加载主路径和次级路径
     print("加载路径数据...")
-    Pri_path, Secon_path = loading_paths_from_MAT(
+    Pri_path, Second_path = loading_paths_from_MAT(
         folder='Primary and Secondary Path',  # 路径文件所在主目录
         subfolder='',  # 子目录
         Pri_path_file_name='Primary_path.mat',  # 主路径文件名
         Sec_path_file_name='Secondary_path.mat'  # 次级路径文件名
         # Sec_path_file_name='secondary_path_5mic_4spk.npy'  # 次级路径文件名
     )
-    
+
+    # TODO 加载次级路径 生成干扰噪音部分需要适配MIMO场景
+
     # 从真实噪声生成干扰信号
     print("生成干扰信号...")
-    Dis, Fx, Re = Disturbance_generation_from_real_noise(
-        fs=fs,  # 采样率
-        Repet=0,  # 重复次数
-        wave_form=waveform,  # 输入波形
-        Pri_path=Pri_path,  # 主路径
-        Sec_path=Secon_path  # 次级路径
+    # Dis, Fx, Re = Disturbance_generation_from_real_noise(
+    #     fs=fs,  # 采样率
+    #     Repet=0,  # 重复次数
+    #     wave_form=waveform,  # 输入波形
+    #     Pri_path=Pri_path,  # 主路径
+    #     Sec_path=Second_path  # 次级路径
+    # )
+
+    Dis, Re, Fx = Disturbance_generation_from_real_noise_MIMO(
+        fs=fs,
+        Repet=0,
+        wave_form=waveform,
+        Pri_path=Pri_path,   # 需要确保 Pri_path 形状为 (I, K, L_pri)
+        Sec_path=Second_path  # 形状 (J, K, L_sec)
     )
     
     # 打印数据形状，验证数据加载正确性
@@ -89,7 +102,7 @@ def load_and_preprocess_data():
     import matplotlib as mpl
     mpl.rcParams['agg.path.chunksize'] = 10000  # 增加路径块大小以避免绘图错误
     
-    return fs, StepSize, Re, Dis, Fx
+    return fs, StepSize, Dis, Re, Fx, Second_path
 
 def run_fxnlms_algorithm(fs, StepSize, Dis, Fx):
     """运行FxNLMS算法"""
@@ -134,7 +147,7 @@ def run_fxnlms_algorithm(fs, StepSize, Dis, Fx):
     return ErrorFxNLMS, Time
 
 
-def select_control_filter(fs, Re):
+def select_control_filter(fs, Ref):
     """控制滤波器选择"""
     print("\n=== 控制滤波器选择 ===")
     
@@ -142,35 +155,52 @@ def select_control_filter(fs, Re):
     print("使用CNN模型选择控制滤波器...")
     id_vector = Control_filter_selection(
         fs=16000,  # 采样率
-        Primary_noise=Re.unsqueeze(0)  # 主噪声，增加批次维度
+        Primary_noise=Ref.unsqueeze(0)  # 主噪声，增加批次维度
     )
     
     print('选择的控制滤波器索引:', id_vector)
     return id_vector
 
 
-def run_sfanc_fxnlms_hybrid(fs, StepSize, Dis, Fx, id_vector):
+def run_sfanc_fxnlms_hybrid(fs, StepSize, Dis, Re, Second_path, id_vector):
     """运行SFANC-FxNLMS混合算法"""
     print("\n=== SFANC-FxNLMS 混合算法 ===")
     
     # 预训练控制滤波器文件路径
     FILE_NAME_PATH = 'Trained models/Pretrained_Control_filters.mat'
     
-    # 创建SFANC-FxNLMS混合算法实例
-    print("创建SFANC-FxNLMS混合算法实例...")
-    SFANC_FxNLMS_Cancellation = SFANC_FxNLMS(
+    print("创建MIMO_SFANC-FxNLMS混合算法实例...")
+    MIMO_SFANC_FxNLMS_Cancellation = MIMO_SFANC_FxNLMS(
+        num_inputs=1,
+        num_outputs=1,
+        num_errors=1,
+        secondary_path=Second_path,  # 次级路径
         MAT_FILE=FILE_NAME_PATH,  # 预训练滤波器文件
         fs=16000  # 采样率
     )
-    
-    # 执行噪声消除
-    print("执行噪声消除...")
-    Error_SFANC_FxNLMS = SFANC_FxNLMS_Cancellation.noise_cancellation(
+
+    Error_SFANC_FxNLMS = MIMO_SFANC_FxNLMS_Cancellation.noise_cancellation(
         Dis=Dis,  # 干扰信号
-        Fx=Fx,  # filtered-x信号
+        Re=Re,  # filtered-x信号
         filter_index=id_vector,  # 选择的滤波器索引
         Stepsize=StepSize  # 学习率
     )
+
+    # # 创建SFANC-FxNLMS混合算法实例
+    # print("创建SFANC-FxNLMS混合算法实例...")
+    # SFANC_FxNLMS_Cancellation = SFANC_FxNLMS(
+    #     MAT_FILE=FILE_NAME_PATH,  # 预训练滤波器文件
+    #     fs=16000  # 采样率
+    # )
+    
+    # # 执行噪声消除
+    # print("执行噪声消除...")
+    # Error_SFANC_FxNLMS = SFANC_FxNLMS_Cancellation.noise_cancellation(
+    #     Dis=Dis,  # 干扰信号
+    #     Fx=Fx,  # filtered-x信号
+    #     filter_index=id_vector,  # 选择的滤波器索引
+    #     Stepsize=StepSize  # 学习率
+    # )
     
     # 绘制混合算法结果
     print("绘制混合算法结果...")
@@ -195,7 +225,7 @@ def run_sfanc_fxnlms_hybrid(fs, StepSize, Dis, Fx, id_vector):
     return Error_SFANC_FxNLMS
 
 
-def performance_comparison(Dis, ErrorFxNLMS, Error_SFANC_FxNLMS, fs):
+def performance_comparison(fs, Error_SFANC_FxNLMS, Dis, ErrorFxNLMS):
     """性能对比分析"""
     print("\n=== 性能对比分析 ===")
     
@@ -216,9 +246,9 @@ def performance_comparison(Dis, ErrorFxNLMS, Error_SFANC_FxNLMS, fs):
     
     print('=== 性能对比结果 ===')
     print(f'原始信号RMSE: {rmse_original:.4f}')
-    print(f'FxNLMS算法RMSE: {rmse_fxnlms:.4f}')
+    # print(f'FxNLMS算法RMSE: {rmse_fxnlms:.4f}')
     print(f'混合算法RMSE: {rmse_hybrid:.4f}')
-    print(f'FxNLMS SNR改善: {snr_fxnlms:.2f} dB')
+    # print(f'FxNLMS SNR改善: {snr_fxnlms:.2f} dB')
     print(f'混合算法SNR改善: {snr_hybrid:.2f} dB')
     
     # 绘制三种情况的对比图
@@ -251,7 +281,7 @@ def performance_comparison(Dis, ErrorFxNLMS, Error_SFANC_FxNLMS, fs):
     plt.grid(alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig('pdf/Comparison.pdf', dpi=600, bbox_inches='tight', pad_inches=0)
+    plt.savefig('atlas/Comparison.pdf', dpi=600, bbox_inches='tight', pad_inches=0)
     plt.close()
     
     return {
@@ -290,7 +320,7 @@ def main():
         check_gpu()
         
         # 2. 数据加载与预处理
-        fs, StepSize, Re, Dis, Fx = load_and_preprocess_data()
+        fs, StepSize, Dis, Re, Fx, Second_path = load_and_preprocess_data()
         
         # 3. 运行FxNLMS算法
         ErrorFxNLMS, Time = run_fxnlms_algorithm(fs, StepSize, Dis, Fx)
@@ -299,10 +329,10 @@ def main():
         id_vector = select_control_filter(fs, Re)
         
         # 5. 运行SFANC-FxNLMS混合算法
-        Error_SFANC_FxNLMS = run_sfanc_fxnlms_hybrid(fs, StepSize, Dis, Fx, id_vector)
+        Error_SFANC_FxNLMS = run_sfanc_fxnlms_hybrid(fs, StepSize, Dis, Re, Second_path, id_vector)
         
         # 6. 性能对比分析
-        results = performance_comparison(Dis, ErrorFxNLMS, Error_SFANC_FxNLMS, fs)
+        results = performance_comparison(fs, Error_SFANC_FxNLMS, Dis, ErrorFxNLMS)
         
         # 7. 保存结果
         save_results(results)
