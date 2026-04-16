@@ -140,7 +140,7 @@ def run_fxnlms_algorithm(fs, StepSize, Dis, Fx):
     plt.grid(alpha=0.3)
     
     # 确保pdf目录存在
-    os.makedirs('pdf', exist_ok=True)
+    # os.makedirs('pdf', exist_ok=True)
     plt.savefig('atlas/FxNLMS.pdf', dpi=600, bbox_inches='tight', pad_inches=0)
     plt.close()
     
