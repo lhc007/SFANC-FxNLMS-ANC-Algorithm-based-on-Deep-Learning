@@ -73,8 +73,6 @@ def load_and_preprocess_data():
         # Sec_path_file_name='secondary_path_5mic_4spk.npy'  # 次级路径文件名
     )
 
-    # TODO 加载次级路径 生成干扰噪音部分需要适配MIMO场景
-
     # 从真实噪声生成干扰信号
     print("生成干扰信号...")
     # Dis, Fx, Re = Disturbance_generation_from_real_noise(
