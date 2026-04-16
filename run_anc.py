@@ -178,7 +178,8 @@ def run_sfanc_fxnlms_hybrid(fs, StepSize, Dis, Re, Second_path, id_vector):
         MAT_FILE=FILE_NAME_PATH,  # 预训练滤波器文件
         fs=16000  # 采样率
     )
-
+    
+    print("执行噪声消除...")
     Error_SFANC_FxNLMS = MIMO_SFANC_FxNLMS_Cancellation.noise_cancellation(
         Dis=Dis,  # 干扰信号
         Re=Re,  # filtered-x信号
@@ -246,9 +247,9 @@ def performance_comparison(fs, Error_SFANC_FxNLMS, Dis, ErrorFxNLMS):
     
     print('=== 性能对比结果 ===')
     print(f'原始信号RMSE: {rmse_original:.4f}')
-    # print(f'FxNLMS算法RMSE: {rmse_fxnlms:.4f}')
+    print(f'FxNLMS算法RMSE: {rmse_fxnlms:.4f}')
     print(f'混合算法RMSE: {rmse_hybrid:.4f}')
-    # print(f'FxNLMS SNR改善: {snr_fxnlms:.2f} dB')
+    print(f'FxNLMS SNR改善: {snr_fxnlms:.2f} dB')
     print(f'混合算法SNR改善: {snr_hybrid:.2f} dB')
     
     # 绘制三种情况的对比图

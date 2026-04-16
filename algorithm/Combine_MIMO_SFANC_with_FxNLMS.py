@@ -243,6 +243,28 @@ class MIMO_SFANC_FxNLMS:
         self.K = num_errors
         self.secondary_path = secondary_path  # 形状 (J, K, sec_len)
         
+        if secondary_path is None:
+            # 如果没有提供次级路径，默认使用单位矩阵
+            self.S = torch.eye(self.J, self.K).unsqueeze(-1)  # (J, K, 1)
+        else:
+            # 如果提供了次级路径，确保其形状为 (J, K, sec_len)
+            # 并将其转换为 torch 张量 (float32)
+            self.S = torch.tensor(secondary_path, dtype=torch.float32)
+            # 确保至少 3 维
+            if self.S.dim() == 1:
+                # 假设 (L_sec,) -> (1, 1, L_sec)
+                self.S = self.S.reshape(1, 1, -1)
+            elif self.S.dim() == 2:
+                # 假设 (J, K) 或 (K, L_sec) 等，这里按 (J, K) 处理并增加长度维度
+                # 更安全的方式：如果形状为 (J, K)，则扩展为 (J, K, 1)
+                if self.S.shape[0] == self.J and self.S.shape[1] == self.K:
+                    self.S = self.S.unsqueeze(-1)  # (J, K, 1)
+                else:
+                    # 否则尝试 reshape 为 (1, K, L_sec) 或类似，但简单起见报错提示
+                    raise ValueError(f"无法自动推断次级路径形状 {self.S.shape}，期望 (J, K) 或 (J, K, L_sec)")
+            # 如果已经是三维，保持不变
+        self.secondary_path = self.S   # 确保传入 MIMO_FxNLMS 的是三维张量
+
         # 加载预训练的固定控制滤波器，形状应为 (num_filters, J, I, L)
         self.control_filters = self.Load_Pretrained_filters_to_tensor(MAT_FILE)
         # 期望形状: (num_filters, J, I, L)
