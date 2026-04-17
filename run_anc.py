@@ -63,14 +63,17 @@ def load_and_preprocess_data():
         sound_name=sound_name+'.wav'  # 噪声文件名
     )
     
+    #TODO 加载次级路径 生成干扰噪音部分需要适配MIMO场景
     # 加载主路径和次级路径
     print("加载路径数据...")
     Pri_path, Second_path = loading_paths_from_MAT(
         folder='Primary and Secondary Path',  # 路径文件所在主目录
         subfolder='',  # 子目录
-        Pri_path_file_name='Primary_path.mat',  # 主路径文件名
-        Sec_path_file_name='Secondary_path.mat'  # 次级路径文件名
-        # Sec_path_file_name='secondary_path_5mic_4spk.npy'  # 次级路径文件名
+        # Pri_path_file_name='Primary_path.mat',  # 主路径文件名
+        # Sec_path_file_name='Secondary_path.mat'  # 次级路径文件名
+
+        Pri_path_file_name='primary_path_1ref_5mic.npy',  # 主路径文件名
+        Sec_path_file_name='secondary_path_4spk_5mic.npy'  # 次级路径文件名
     )
 
     # 从真实噪声生成干扰信号
@@ -322,7 +325,7 @@ def main():
         fs, StepSize, Dis, Re, Fx, Second_path = load_and_preprocess_data()
         
         # 3. 运行FxNLMS算法
-        ErrorFxNLMS, Time = run_fxnlms_algorithm(fs, StepSize, Dis, Fx)
+        # ErrorFxNLMS, Time = run_fxnlms_algorithm(fs, StepSize, Dis, Fx)
         
         # 4. 控制滤波器选择
         id_vector = select_control_filter(fs, Re)
@@ -331,10 +334,10 @@ def main():
         Error_SFANC_FxNLMS = run_sfanc_fxnlms_hybrid(fs, StepSize, Dis, Re, Second_path, id_vector)
         
         # 6. 性能对比分析
-        results = performance_comparison(fs, Error_SFANC_FxNLMS, Dis, ErrorFxNLMS)
+        # results = performance_comparison(fs, Error_SFANC_FxNLMS, Dis, ErrorFxNLMS)
         
         # 7. 保存结果
-        save_results(results)
+        # save_results(results)
 
         print("\n=== 算法运行完成 ===")
         print("所有处理步骤已完成，结果文件已生成")

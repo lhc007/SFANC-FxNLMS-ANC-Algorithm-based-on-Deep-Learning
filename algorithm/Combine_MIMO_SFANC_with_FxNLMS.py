@@ -56,7 +56,13 @@ class MIMO_FxNLMS:
             assert self.J == self.K, "默认次级路径要求 J == K"
             self.S = torch.eye(self.J, self.K).unsqueeze(-1)  # (J, K, 1)
         else:
-            self.S = torch.tensor(secondary_path, dtype=torch.float32)
+            # self.S = torch.tensor(secondary_path, dtype=torch.float32)
+            S_raw = torch.as_tensor(secondary_path, dtype=torch.float32).clone()
+            # 直接截断至滤波器长度（如果更长）
+            if S_raw.shape[2] > self.L:
+                self.S = S_raw[:, :, :self.L]
+            else:
+                self.S = S_raw
         self.sec_len = self.S.shape[2]
 
         # 滤波参考信号延迟线 (J, I, K, L)

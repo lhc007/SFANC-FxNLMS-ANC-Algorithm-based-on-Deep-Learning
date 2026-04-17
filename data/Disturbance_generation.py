@@ -125,9 +125,9 @@ def Disturbance_generation_from_real_noise_MIMO(fs, Repet, wave_form, Pri_path, 
         fs          : 采样率 (Hz)
         Repet       : 重复次数，用于扩展信号长度
         wave_form   : 原始噪声波形，形状 (I, N) 或 (N,)，I 为参考通道数
-        Pri_path    : 主路径脉冲响应，形状 (I, K, L_pri) 或 (K, L_pri)（I=1）
-        Sec_path    : 次级路径脉冲响应，形状 (J, K, L_sec)
-
+        Pri_path    : 主路径脉冲响应，形状 (I, K, L_pri) (参考通道数 X 误差麦克风数 X 脉冲响应长度) 或 (K, L_pri)（I=1） 
+        Sec_path    : 次级路径脉冲响应，形状 (J, K, L_sec) (扬声器数 X 误差麦克风数 X 脉冲响应长度)。
+        
     返回:
         Dis         : 干扰信号（主路径输出），形状 (K, N_out)
         Re          : 原始重复波形，形状 (I, N_out)
@@ -166,10 +166,15 @@ def Disturbance_generation_from_real_noise_MIMO(fs, Repet, wave_form, Pri_path, 
     # 次级路径 Sec_path: 形状 (J, K, L_sec)
     if Sec_path.ndim == 1:
         # 单通道次级路径，形状 (L_sec,) -> (1, 1, L_sec)
+        print("Sec_path is 1D, reshape to (1, 1, L_sec)")
         Sec_path = Sec_path.reshape(1, 1, -1)
     elif Sec_path.ndim == 2:
-        Sec_path = Sec_path.reshape(1, Sec_path.shape[0], -1)
+        # 多通道次级路径，形状 (J, L_sec) -> (J, 1, L_sec)
+        print("Sec_path is 2D, reshape to (J, 1, L_sec)")
+        Sec_path = Sec_path.reshape(Sec_path.shape[0], 1, -1)
+
     J, K_sec, L_sec = Sec_path.shape
+
     assert K_pri == K_sec, f"主路径误差通道数 {K_pri} 与次级路径误差通道数 {K_sec} 不一致"
     K = K_pri
 
